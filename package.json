@@ -1,9 +1,13 @@
 {
   "name": "sanialarm-server",
-  "description": "This package is the server for the Sanialarm Suite which you can host at your own institution",
+  "description": "This package is the server for the Sanialarm Suite. Please do not install this as standalone application",
   "version": "1.0.0",
   "license": "AGPL-3.0-only",
   "homepage": "https://",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/j-suchard/sanialarm-server"
+  },
   "author": {
     "name": "Jan Eike Suchard",
     "email": "jan-eike.suchard@magenta.de",
@@ -13,12 +17,9 @@
     "body-parser": "^1.19.0",
     "config": "^3.3.3",
     "express": "^4.17.1",
+    "firebase-admin": "^9.4.2",
     "mysql": "^2.18.1",
-    "nconf": "^0.11.0",
     "node-php-password": "^0.1.2",
     "toml": "^3.0.0"
-  },
-  "scripts": {
-    "start": "node main.js"
   }
 }

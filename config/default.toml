@@ -1,12 +1,13 @@
 [database]
-host = "localhost"
-port = 3306
-user = "<<<<<replace-user>>>>>"
-pass = "<<<<<replace-pass>>>>>"
+host = "replace-host"
+port = "replace-port"
+user = "replace-user"
+pass = "replace-pass"
 
 [express]
-port = 8000
+port = 8888
 
 [firebase]
-# If you are using an self hosted system, please read the following documentation on how to retrive the FirebaseCredentials (https://firebase.google.com/docs/admin/setup#initialize-sdk)
+# If you are using an self hosted system, please read the following documentation on how to retrive the Service
+# Account to get the notifications working (https://firebase.google.com/docs/admin/setup#initialize-sdk)
 credentialLocation = ""
