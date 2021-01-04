@@ -11,8 +11,14 @@
   },
   "dependencies": {
     "body-parser": "^1.19.0",
+    "config": "^3.3.3",
     "express": "^4.17.1",
     "mysql": "^2.18.1",
-    "node-php-password": "^0.1.2"
+    "nconf": "^0.11.0",
+    "node-php-password": "^0.1.2",
+    "toml": "^3.0.0"
+  },
+  "scripts": {
+    "start": "node main.js"
   }
 }

@@ -1,0 +1,12 @@
+[database]
+host = "localhost"
+port = 3306
+user = "<<<<<replace-user>>>>>"
+pass = "<<<<<replace-pass>>>>>"
+
+[express]
+port = 8000
+
+[firebase]
+# If you are using an self hosted system, please read the following documentation on how to retrive the FirebaseCredentials (https://firebase.google.com/docs/admin/setup#initialize-sdk)
+credentialLocation = ""
