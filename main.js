@@ -36,44 +36,74 @@ firebase.initializeApp({
 
 // Standard route for all requests going to webserver/
 api.route('/')
-    .all((req, res) => {
+    .get((req, res) => {
         // Display permission error on user site
         res.sendStatus(403);
     })
-
-// Handle status requests
-api.route('/status')
-    .get((req, res) => {
-        // Send HTTP Code 418 ("I'm a teapot") as answer that the API Server is online
-        res.sendStatus(418);
-        console.log("Status request at " + tools.timeAndDate())
-    })
-
-// Handle Requests concerning the creation of items
-api.route('/create/:what')
-    // Answer with method not allowed to GET-Requests
-    .get((req, res) => {
-        res.setHeader("Allow", "POST")
-        res.sendStatus(405)
-    })
     .post((req, res) => {
-        const objectType = req.params.what;
-        if (objectType === 'account') {
+        const action = req.body.action;
+        if (action === 'create:account') {
+            // Variable for the response data sent back to the client
+            let responseData = {
+                "userID": ""
+            }
+            // Get data from POST Request Body
             const personalData = req.body.personalData
             const accountData = req.body.accountData
+            // Create SQL Query and set items to insert
             let query = "INSERT INTO users (uid, given_name, surname, email_address, password) VALUES (?, ?, ?, ?, ?)";
             let query_data = [
-                Date.now(), personalData.given_name, personalData.surname, personalData.email_address, accountData.password
+                Math.floor(Math.random() * Date.now()), personalData.given_name, personalData.surname, personalData.email_address, phpPasswords.hash(accountData.password)
             ]
-            connection.query(query, query_data, (error, results, fields) => {
+            // Insert the user into the database
+            connection.query(mysql.format(query, query_data), (error, results, fields) => {
                 if (error) {
                     res.status(500).json(error);
                 } else {
-                    const internalUID = results.insertedId
-                    let query = "UPDATE keys SET used_by = ? WHERE key = ?"
+                    const internalUID = results.insertId
+                    let updateQuery = "UPDATE activations SET used_by = ? WHERE activation_key = ?"
+                    let updateData = [
+                        internalUID, accountData.key
+                    ]
+                    connection.query(mysql.format(updateQuery, updateData), (updateError, updateResults, fields) => {
+                        if (updateError) {
+                            res.status(500).json(updateError);
+                        } else {
+                            connection.query(mysql.format('SELECT * FROM users WHERE internal_uid = ?', [internalUID]), (error, results, fields) => {
+                                responseData.userID = results[0].uid;
+                                if (accountData.type === 'admin') {
+                                    const sql = "INSERT INTO admins (user_id) VALUES (?)"
+                                    const data = [
+                                        internalUID
+                                    ];
+                                    const query = mysql.format(sql, data);
+                                    connection.query(query, (error, results, fields) => {
+                                        if (error) {
+                                            res.status(500).json(error);
+                                        } else {
+                                            res.status(201).json(responseData);
+                                        }
+                                    });
+                                } else if (accountData.type === 'responder') {
+                                    const sql = "INSERT INTO responders (user_id) VALUES (?)";
+                                    const data = [
+                                        internalUID
+                                    ];
+                                    const query = mysql.format(sql, data)
+                                    connection.query(query, (error, results, fields) => {
+                                        if (error) {
+                                            res.status(500).json(error);
+                                        } else {
+                                            res.status(201).json(responseData);
+                                        }
+                                    });
+                                }
+                            });
+                        }
+                    })
                 }
             })
-        } else if (objectType === 'notification') {
+        } else if (action === 'create:notification') {
             const notificationData = req.body.data
             const misc = req.body.misc;
             let notification = {
@@ -95,7 +125,7 @@ api.route('/create/:what')
                             const responseData = {
                                 "status": "sent",
                                 "firebase_id": messageID,
-                                "internal_id": results.insertedId
+                                "internal_id": results.insertId
                             }
                             res.status(201).json(responseData);
                         }
@@ -104,7 +134,60 @@ api.route('/create/:what')
                 .catch((error) => {
                     console.log('ERROR: ', error)
                 })
+
+        } else if (action === 'login:mobile') {
+            const loginData = req.body.loginData
+            const sql = "SELECT * FROM users WHERE email_address = ?";
+            const sql_data = [
+                loginData.emailAddress
+            ]
+            connection.query(mysql.format(sql, sql_data), (error, results, fields) => {
+                if (error) {
+                    res.status(500).json(error)
+                } else {
+                    if (phpPasswords.verify(loginData.password, results[0].user_password)) {
+                        let responseData = {
+                            "validData": true,
+                            "accountData": {
+                                "internalID": results[0].internal_uid,
+                                "accountID": results[0].uid,
+                                "givenName": results[0].given_name,
+                                "surname": results[0].surname,
+                                "email_address": results[0].email_address,
+                                "adminAccount": (results[0].isAdmin === 1),
+                                "responderAccount": (results[0].isResponder === 1),
+                                "developerAccount": (results[0].isDeveloper === 1),
+                                "responderLevel": null
+                            }
+                        }
+                        if (responseData.accountData.responderAccount) {
+                            const sql = "SELECT responder_level FROM responders WHERE internal_uid = ?"
+                            const sql_data = [responseData.accountData.internalID]
+                            console.log(mysql.format(sql, sql_data))
+                            connection.query(mysql.format(sql, sql_data), (error, results, fields) => {
+                                if (error) {
+                                    res.status(500).json(error)
+                                } else {
+                                    console.log(results[0].responder_level)
+                                    responseData.accountData.responderLevel = results[0].responder_level
+                                    res.json(responseData)
+                                }
+                            })
+                        } else {
+                            res.json(responseData)
+                        }
+                    }
+                }
+            })
         }
+    })
+
+// Handle status requests
+api.route('/status')
+    .get((req, res) => {
+        // Send HTTP Code 418 ("I'm a teapot") as answer that the API Server is online
+        res.sendStatus(418);
+        console.log("Status request at " + tools.timeAndDate())
     })
 
 /* Let the API Server listen on port and log time and date */
